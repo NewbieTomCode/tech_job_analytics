@@ -1,1 +1,11 @@
 # Python package dependencies
+requests
+python-dotenv
+pandas
+matplotlib
+seaborn
+scikit-learn    
+streamlit
+pytest
+psycopg
+sqlalchemy
