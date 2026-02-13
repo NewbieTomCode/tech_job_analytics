@@ -7,7 +7,7 @@ from src.config.settings import ADZUNA_APP_KEY, ADZUNA_APP_ID
 if not ADZUNA_APP_ID or not ADZUNA_APP_KEY:
     raise ValueError("Missing API credentials")
 
-def fetch_job_data():
+def fetch_job_data(base_url="https://api.adzuna.com/v1/api/jobs/gb/search/1"):
     url = f"https://api.adzuna.com/v1/api/jobs/gb/search/1"
     results_per_page = 50
 
@@ -34,5 +34,15 @@ def fetch_job_data():
         all_jobs.extend(data["results"])
         print(f"Fetched page {page}")
     print(all_jobs)
+    store_job_data(all_jobs)
+    return all_jobs
 
-fetch_job_data()
+def store_job_data(job_data, filename="saved_data/input/all_jobs.json"):
+    with open(filename, "w") as f:
+        json.dump(job_data, f, indent=2, ensure_ascii=False)
+
+    print(f"Saved {len(job_data)} jobs to {filename}")
+
+
+if __name__ == "__main__":
+    fetch_job_data()
