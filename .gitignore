@@ -1,5 +1,8 @@
 .env
 venv/
 .venv/
-
-.db
+__pycache__/
+*.pyc
+.idea/
+saved_data/
+*.db

@@ -4,8 +4,9 @@ python-dotenv
 pandas
 matplotlib
 seaborn
-scikit-learn    
+scikit-learn
 streamlit
 pytest
-psycopg
+psycopg[binary]
 sqlalchemy
+pyyaml

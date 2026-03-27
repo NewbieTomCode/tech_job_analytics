@@ -1,0 +1,23 @@
+# Job Intelligence Pipeline Configuration
+
+api:
+  base_url: "https://api.adzuna.com/v1/api/jobs"
+  country: "gb"
+  results_per_page: 50
+  rate_limit_delay: 1  # seconds between API calls
+
+search:
+  what_or: "tech,dataengineer,software"
+  where: "London"
+  full_time: true
+  permanent: true
+
+database:
+  host: "localhost"
+  port: 5432
+  name: "job_intelligence"
+  # user and password loaded from .env
+
+pipeline:
+  raw_data_path: "saved_data/input"
+  log_level: "INFO"
