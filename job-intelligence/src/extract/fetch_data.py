@@ -4,10 +4,12 @@ import json
 import requests
 from src.config.settings import ADZUNA_APP_KEY, ADZUNA_APP_ID
 
-if not ADZUNA_APP_ID or not ADZUNA_APP_KEY:
-    raise ValueError("Missing API credentials")
+def _check_credentials():
+    if not ADZUNA_APP_ID or not ADZUNA_APP_KEY:
+        raise ValueError("Missing API credentials")
 
 def fetch_job_data(base_url="https://api.adzuna.com/v1/api/jobs/gb/search/1"):
+    _check_credentials()
     url = f"https://api.adzuna.com/v1/api/jobs/gb/search/1"
     results_per_page = 50
 

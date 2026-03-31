@@ -20,5 +20,22 @@ services:
       timeout: 5s
       retries: 5
 
+  app:
+    build: .
+    container_name: job_intelligence_app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ADZUNA_APP_ID: ${ADZUNA_APP_ID}
+      ADZUNA_APP_KEY: ${ADZUNA_APP_KEY}
+      POSTGRES_USER: ${POSTGRES_USER:-job_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-job_secret}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-job_intelligence}
+    volumes:
+      - ./saved_data:/app/saved_data
+
 volumes:
   postgres_data:
