@@ -181,3 +181,66 @@ class TestLogScrapeRun:
         )
 
         mock_session.execute.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# get_job_count tests
+# ---------------------------------------------------------------------------
+class TestGetJobCount:
+    @patch("src.database_connections.db_utils.get_session")
+    def test_returns_count(self, mock_get_session):
+        mock_session = MagicMock()
+        mock_get_session.return_value.__enter__ = MagicMock(return_value=mock_session)
+        mock_get_session.return_value.__exit__ = MagicMock(return_value=False)
+        mock_session.execute.return_value.scalar.return_value = 42
+
+        from src.database_connections.db_utils import get_job_count
+
+        assert get_job_count() == 42
+
+    @patch("src.database_connections.db_utils.get_session")
+    def test_returns_zero_when_empty(self, mock_get_session):
+        mock_session = MagicMock()
+        mock_get_session.return_value.__enter__ = MagicMock(return_value=mock_session)
+        mock_get_session.return_value.__exit__ = MagicMock(return_value=False)
+        mock_session.execute.return_value.scalar.return_value = 0
+
+        from src.database_connections.db_utils import get_job_count
+
+        assert get_job_count() == 0
+
+
+# ---------------------------------------------------------------------------
+# get_recent_jobs tests
+# ---------------------------------------------------------------------------
+class TestGetRecentJobs:
+    @patch("src.database_connections.db_utils.get_session")
+    def test_returns_list_of_dicts(self, mock_get_session):
+        mock_session = MagicMock()
+        mock_get_session.return_value.__enter__ = MagicMock(return_value=mock_session)
+        mock_get_session.return_value.__exit__ = MagicMock(return_value=False)
+
+        mock_row = MagicMock()
+        mock_row._mapping = {
+            "id": 1, "title": "Data Engineer", "company": "Acme",
+            "location": "London", "posted_date": "2025-03-15",
+        }
+        mock_session.execute.return_value.fetchall.return_value = [mock_row]
+
+        from src.database_connections.db_utils import get_recent_jobs
+
+        result = get_recent_jobs(limit=5)
+
+        assert len(result) == 1
+        assert result[0]["title"] == "Data Engineer"
+
+    @patch("src.database_connections.db_utils.get_session")
+    def test_empty_table(self, mock_get_session):
+        mock_session = MagicMock()
+        mock_get_session.return_value.__enter__ = MagicMock(return_value=mock_session)
+        mock_get_session.return_value.__exit__ = MagicMock(return_value=False)
+        mock_session.execute.return_value.fetchall.return_value = []
+
+        from src.database_connections.db_utils import get_recent_jobs
+
+        assert get_recent_jobs() == []

@@ -23,17 +23,17 @@ Adzuna API
      ↓
 Data Ingestion (Python)
      ↓
-PostgreSQL Database
+PostgreSQL Database (raw_jobs staging → cleaned jobs)
      ↓
-Data Processing (Pandas / NLP)
+Data Processing (cleaning, dedup, skill extraction)
      ↓
-Analytics & Dashboard
+Analytics & Streamlit Dashboard
      ↓
 User Reports
 
-Deployed on:
+Orchestrated by Apache Airflow (DAG: fetch → load_raw → clean_and_upsert → extract_skills → log_run)
 
-AWS EC2 (Ubuntu Linux)
+Deployed on: AWS EC2 (Ubuntu Linux) via Docker Compose
 
 📊 Features
 ✅ Data Collection
@@ -78,39 +78,65 @@ Job trends over time
 
 Location-based insights
 
-✅ Automation
+✅ Orchestration & Automation
 
-Scheduled daily data ingestion
+Apache Airflow DAG with task-level retries
 
-Automatic updates
+Scheduled daily data ingestion (8am UTC)
+
+Airflow web UI for monitoring at localhost:8080
 
 Logging and error handling
 
 📁 Project Structure
-job-intelligence/
+tech_job_analytics/
 │
-├── ingestion/
-│   └── adzuna_client.py
+├── Dockerfile
+├── docker-compose.yml               # Postgres + Airflow + app services
+├── init-airflow-db.sql              # Creates Airflow metadata database
+├── README.md
+├── .gitignore
 │
-├── database/
-│   ├── schema.sql
-│   └── db_utils.py
+├── dags/
+│   └── job_pipeline_dag.py          # Airflow DAG: orchestrates the ELT pipeline
 │
-├── processing/
-│   ├── clean_data.py
-│   └── skill_extractor.py
-│
-├── analytics/
-│   └── reports.py
-│
-├── dashboard/
-│   └── app.py
-│
-├── scheduler/
-│   └── cron_jobs.sh
-│
-├── config/
-│   └── config.yaml
-│
-├── requirements.txt
-└── README.md
+└── job-intelligence/
+    ├── run_pipeline.py              # CLI entry point (manual runs)
+    ├── conftest.py                  # pytest path configuration
+    ├── requirements.txt
+    │
+    ├── src/
+    │   ├── extract/
+    │   │   └── fetch_data.py        # Adzuna API client with pagination
+    │   │
+    │   ├── transform/
+    │   │   ├── clean_data.py        # Data validation & normalization
+    │   │   └── skill_extractor.py   # NLP-based skill extraction
+    │   │
+    │   ├── load/
+    │   │   └── load_data.py         # Raw insert + dedup upsert into Postgres
+    │   │
+    │   ├── database_connections/
+    │   │   ├── schema.sql           # PostgreSQL table definitions
+    │   │   └── db_utils.py          # Connection pooling & CRUD operations
+    │   │
+    │   ├── analytics/
+    │   │   └── reports.py           # SQL queries for market insights
+    │   │
+    │   ├── dashboard/
+    │   │   └── app.py               # Streamlit web dashboard
+    │   │
+    │   └── config/
+    │       ├── config.yaml          # Pipeline configuration
+    │       └── settings.py          # Environment variable loader
+    │
+    ├── scheduler/
+    │   └── cron_jobs.sh             # Cron alternative (if not using Airflow)
+    │
+    └── tests/
+        ├── test_extract.py          # API ingestion tests
+        ├── test_clean_data.py       # Data cleaning tests
+        ├── test_skill_extractor.py  # Skill extraction tests
+        ├── test_db_utils.py         # Database utility tests
+        ├── test_load.py             # Load pipeline tests
+        └── test_reports.py          # Analytics query tests

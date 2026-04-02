@@ -1,5 +1,29 @@
 version: '3.8'
 
+x-airflow-common: &airflow-common
+  build: .
+  environment: &airflow-env
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER:-job_admin}:${POSTGRES_PASSWORD:-job_secret}@postgres:5432/airflow
+    AIRFLOW__CORE__FERNET_KEY: ''
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'false'
+    AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+    # App env vars
+    ADZUNA_APP_ID: ${ADZUNA_APP_ID}
+    ADZUNA_APP_KEY: ${ADZUNA_APP_KEY}
+    POSTGRES_USER: ${POSTGRES_USER:-job_admin}
+    POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-job_secret}
+    POSTGRES_HOST: postgres
+    POSTGRES_PORT: 5432
+    POSTGRES_DB: ${POSTGRES_DB:-job_intelligence}
+  volumes:
+    - ./dags:/opt/airflow/dags
+    - ./job-intelligence/src:/opt/airflow/src
+    - airflow_logs:/opt/airflow/logs
+  depends_on:
+    postgres:
+      condition: service_healthy
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -14,11 +38,49 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./job-intelligence/src/database_connections/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql
+      - ./init-airflow-db.sql:/docker-entrypoint-initdb.d/00_airflow_db.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-job_admin} -d ${POSTGRES_DB:-job_intelligence}"]
       interval: 10s
       timeout: 5s
       retries: 5
+
+  airflow-init:
+    <<: *airflow-common
+    container_name: airflow_init
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        airflow db migrate &&
+        airflow users create \
+          --username admin \
+          --password admin \
+          --firstname Admin \
+          --lastname User \
+          --role Admin \
+          --email admin@example.com || true
+    restart: "no"
+
+  airflow-webserver:
+    <<: *airflow-common
+    container_name: airflow_webserver
+    command: airflow webserver --port 8080
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+
+  airflow-scheduler:
+    <<: *airflow-common
+    container_name: airflow_scheduler
+    command: airflow scheduler
+    restart: unless-stopped
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
 
   app:
     build: .
@@ -36,6 +98,9 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-job_intelligence}
     volumes:
       - ./saved_data:/app/saved_data
+    profiles:
+      - manual
 
 volumes:
   postgres_data:
+  airflow_logs:
