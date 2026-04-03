@@ -1,8 +1,30 @@
+# Secrets
 .env
+
+# Virtual environments
 venv/
 .venv/
+
+# Python bytecode
 __pycache__/
 *.pyc
+
+# IDE
 .idea/
+.vscode/
+*.swp
+
+# Data files
 saved_data/
+
+# Databases (local dev)
 *.db
+*.duckdb
+warehouse/*.duckdb
+
+# Pytest
+.pytest_cache/
+
+# Airflow local artifacts
+airflow_logs/
+*.log
