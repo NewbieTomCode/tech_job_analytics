@@ -60,18 +60,23 @@ def _load_raw(**context):
 # -- Branch 2: Clean → Extract Skills → Log --------------------------------
 
 def _clean_and_upsert(**context):
-    """Transform + Load: clean data, deduplicate, upsert into jobs table."""
+    """Transform + Load: validate, clean data, deduplicate, upsert into jobs table."""
     from src.transform.clean_data import clean_job_batch
     from src.database_connections.db_utils import upsert_jobs
 
     jobs = context["ti"].xcom_pull(task_ids="fetch_jobs", key="raw_jobs")
 
-    # Clean and validate
+    # Clean with two-stage Pydantic validation (raw → clean → validate)
     cleaned = clean_job_batch(jobs)
-    logger.info(f"Cleaned {len(cleaned)} valid jobs from {len(jobs)} raw records")
+    rejected = len(jobs) - len(cleaned)
+    logger.info(
+        f"Validation + cleaning: {len(cleaned)} valid from {len(jobs)} raw "
+        f"({rejected} rejected)"
+    )
 
     # Upsert into database
     stats = upsert_jobs(cleaned)
+    stats["validation_rejected"] = rejected
     context["ti"].xcom_push(key="upsert_stats", value=stats)
     context["ti"].xcom_push(key="cleaned_jobs", value=cleaned)
     logger.info(f"Upsert: {stats['new']} new, {stats['duplicates']} duplicates")

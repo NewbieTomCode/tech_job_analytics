@@ -12,5 +12,6 @@ psycopg[binary]
 psycopg2-binary
 sqlalchemy
 pyyaml
+pydantic
 duckdb
 apache-airflow==2.10.4

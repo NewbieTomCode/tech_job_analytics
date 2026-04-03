@@ -4,6 +4,12 @@ import logging
 from datetime import datetime
 from typing import Optional
 
+from src.validation.schemas import (
+    validate_raw_batch,
+    validate_cleaned_batch,
+    ValidationResult,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -132,18 +138,41 @@ def clean_job(raw_job: dict) -> Optional[dict]:
 
 def clean_job_batch(raw_jobs: list) -> list:
     """
-    Clean a batch of raw job records.
-    Filters out invalid records, returns list of cleaned dicts.
+    Clean a batch of raw job records with two-stage Pydantic validation.
+
+    Stage 1: Validate raw API records (reject malformed input)
+    Stage 2: Clean valid records
+    Stage 3: Validate cleaned output (catch transform bugs)
+
+    Returns list of cleaned dicts that passed both validation gates.
     """
+    # Stage 1: validate raw input
+    raw_result = validate_raw_batch(raw_jobs)
+    if raw_result.error_count:
+        logger.warning(
+            f"Raw validation rejected {raw_result.error_count}/{raw_result.total} records"
+        )
+
+    # Stage 2: clean the validated records
     cleaned = []
     skipped = 0
-
-    for job in raw_jobs:
+    for job in raw_result.valid:
         result = clean_job(job)
         if result:
             cleaned.append(result)
         else:
             skipped += 1
 
-    logger.info(f"Cleaned {len(cleaned)} jobs, skipped {skipped} invalid records")
-    return cleaned
+    # Stage 3: validate cleaned output before database insertion
+    cleaned_result = validate_cleaned_batch(cleaned)
+    if cleaned_result.error_count:
+        logger.warning(
+            f"Cleaned validation rejected {cleaned_result.error_count}/{cleaned_result.total} records"
+        )
+
+    logger.info(
+        f"Pipeline: {len(raw_jobs)} raw → {raw_result.valid_count} passed raw validation → "
+        f"{len(cleaned)} cleaned → {cleaned_result.valid_count} passed final validation "
+        f"({len(raw_jobs) - cleaned_result.valid_count} total rejected)"
+    )
+    return cleaned_result.valid
